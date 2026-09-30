@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f4f0e8">
+  <title>Leak Number Checker</title>
+  <style>
+    :root{--paper:#f4f0e8;--ink:#101010;--acid:#e7ff3c;--red:#ff5c4d;--green:#b8ff9f;--muted:#625f58;--line:3px;--shadow:5px 5px 0 var(--ink)}
+    *{box-sizing:border-box}
+    html{font-family:Arial,Helvetica,sans-serif;background:var(--paper);color:var(--ink);-webkit-text-size-adjust:100%;text-rendering:optimizeLegibility}
+    body{margin:0;min-width:240px;min-height:100dvh;background:var(--paper)}
+    button,input{font:inherit;color:inherit}
+    button{touch-action:manipulation}
+    .shell{width:min(100%,760px);margin-inline:auto;padding:max(20px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
+    header{border-bottom:var(--line) solid var(--ink);padding-bottom:14px;margin-bottom:18px}
+    .eyebrow{display:inline-block;border:2px solid var(--ink);background:var(--acid);padding:4px 7px;font:800 11px/1 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;letter-spacing:.08em;transform:rotate(-1deg)}
+    h1{font-size:clamp(31px,10vw,64px);line-height:.91;letter-spacing:-.07em;margin:12px 0 8px;max-width:680px;text-wrap:balance}
+    .intro{max-width:52ch;margin:0;font:700 clamp(14px,4vw,17px)/1.45 ui-monospace,SFMono-Regular,Consolas,monospace}
+    form{display:grid;grid-template-columns:1fr auto;gap:10px;margin:22px 0 0}
+    .field{min-width:0}
+    label{display:block;margin-bottom:7px;font:900 12px/1 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;letter-spacing:.08em}
+    .input-wrap{display:flex;min-height:54px;border:var(--line) solid var(--ink);background:#fff;box-shadow:var(--shadow)}
+    .prefix{display:grid;place-items:center;padding:0 10px;border-right:var(--line) solid var(--ink);background:var(--acid);font:900 15px/1 ui-monospace,SFMono-Regular,Consolas,monospace}
+    input{width:100%;min-width:0;border:0;outline:0;background:#fff;padding:13px 12px;font:800 18px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.02em}
+    input::placeholder{color:#777;opacity:1}
+    .input-wrap:focus-within{outline:4px solid #4e7cff;outline-offset:2px}
+    .submit{align-self:end;min-height:54px;border:var(--line) solid var(--ink);background:var(--ink);color:#fff;padding:12px 18px;font:900 14px/1 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;letter-spacing:.04em;box-shadow:var(--shadow);cursor:pointer}
+    .submit:hover{background:var(--acid);color:var(--ink)}
+    .submit:active{transform:translate(3px,3px);box-shadow:2px 2px 0 var(--ink)}
+    .submit:focus-visible{outline:4px solid #4e7cff;outline-offset:3px}
+    .submit:disabled{cursor:wait;opacity:.65}
+    .hint{margin:11px 0 0;color:var(--muted);font:700 12px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace}
+    #status{min-height:24px;margin:22px 0 10px;font:900 13px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase}
+    #status[data-kind="loading"]::before{content:"";display:inline-block;width:10px;height:10px;margin-right:8px;background:var(--ink);animation:blink .7s steps(1) infinite}
+    #status[data-kind="error"]{border:var(--line) solid var(--ink);background:var(--red);padding:12px;box-shadow:var(--shadow);text-transform:none}
+    #status[data-kind="success"]{display:inline-block;border:2px solid var(--ink);background:var(--green);padding:7px 9px}
+    @keyframes blink{50%{opacity:0}}
+    .results{display:grid;gap:12px}
+    .empty{border:var(--line) solid var(--ink);background:#fff;padding:clamp(18px,6vw,34px);box-shadow:var(--shadow)}
+    .empty strong{display:block;font-size:clamp(21px,7vw,34px);letter-spacing:-.04em;margin-bottom:8px}
+    .empty p{margin:0;font:700 13px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}
+    .record{border:var(--line) solid var(--ink);background:#fff;box-shadow:var(--shadow);overflow:hidden}
+    .record-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:var(--line) solid var(--ink);background:var(--acid)}
+    .record-head h2{margin:0;font:900 15px/1.25 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;overflow-wrap:anywhere}
+    .count{flex:0 0 auto;border:2px solid var(--ink);background:#fff;padding:3px 6px;font:900 11px/1 ui-monospace,SFMono-Regular,Consolas,monospace}
+    .rows{margin:0}
+    .row{display:grid;grid-template-columns:minmax(94px,32%) minmax(0,1fr);border-top:2px solid var(--ink)}
+    .row:first-child{border-top:0}
+    dt,dd{margin:0;padding:11px 12px;overflow-wrap:anywhere;word-break:break-word}
+    dt{background:#e3e0d9;border-right:2px solid var(--ink);font:900 11px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;letter-spacing:.03em}
+    dd{font:700 14px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap}
+    .nested{display:grid;gap:8px}
+    .nested-item{border:2px solid var(--ink);padding:9px;background:var(--paper)}
+    footer{border-top:var(--line) solid var(--ink);margin-top:28px;padding-top:12px;color:var(--muted);font:700 11px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}
+    .noscript{border:var(--line) solid var(--ink);background:var(--red);padding:12px;margin-top:18px;font-weight:800}
+    [hidden]{display:none!important}
+    @media(max-width:480px){
+      .shell{padding-inline:max(11px,env(safe-area-inset-left));padding-right:max(11px,env(safe-area-inset-right))}
+      form{grid-template-columns:1fr}
+      .submit{width:100%}
+      .row{grid-template-columns:1fr}
+      dt{border-right:0;border-bottom:2px solid var(--ink);padding-block:8px}
+      dd{font-size:13px}
+    }
+    @media(max-width:290px){h1{font-size:29px}.shell{padding-inline:8px}.prefix{padding-inline:7px}input{font-size:15px;padding-inline:8px}.record-head{align-items:flex-start;flex-direction:column}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;scroll-behavior:auto!important}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <span class="eyebrow">India / +91</span>
+      <h1>LEAK<br>CHECK.</h1>
+      <p class="intro">Enter a 10-digit mobile number. Results are shown as received, grouped for fast scanning.</p>
+      <form id="lookup-form" novalidate>
+        <div class="field">
+          <label for="phone">Mobile number</label>
+          <div class="input-wrap">
+            <span class="prefix" aria-hidden="true">+91</span>
+            <input id="phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel-national" pattern="[0-9]{10}" minlength="10" maxlength="10" placeholder="9140692625" aria-describedby="phone-hint" required>
+          </div>
+        </div>
+        <button class="submit" id="submit" type="submit">Check number</button>
+      </form>
+      <p class="hint" id="phone-hint">Digits only. The +91 country code is added automatically.</p>
+    </header>
+
+    <section aria-live="polite" aria-atomic="true">
+      <div id="status"></div>
+    </section>
+    <section id="results" class="results" aria-label="Lookup results"></section>
+
+    <noscript><div class="noscript">JavaScript is required to run this lookup.</div></noscript>
+    <footer>Only check numbers you are authorized to investigate.</footer>
+  </main>
+
+  <script>
+    (() => {
+      'use strict';
+      const API = 'https://osint-apis-hub.onrender.com/api/leak-v1?key=Demo&q=';
+      const form = document.querySelector('#lookup-form');
+      const input = document.querySelector('#phone');
+      const button = document.querySelector('#submit');
+      const status = document.querySelector('#status');
+      const results = document.querySelector('#results');
+
+      input.addEventListener('input', () => {
+        input.value = input.value.replace(/\D/g, '').slice(0, 10);
+        input.removeAttribute('aria-invalid');
+      });
+
+      const setStatus = (message = '', kind = '') => {
+        status.textContent = message;
+        status.dataset.kind = kind;
+      };
+
+      const isPrimitive = value => value === null || ['string', 'number', 'boolean'].includes(typeof value);
+      const prettyKey = key => String(key).replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      const hiddenKeys = new Set(['api','apiname','author','code','creator','credit','credits','datasource','endpoint','error','message','poweredby','provider','source','sourceurl','status','success','url']);
+      const isHiddenKey = key => hiddenKeys.has(String(key).toLowerCase().replace(/[^a-z0-9]/g, ''));
+      const valueText = value => value === null ? 'Not provided' : value === '' ? 'Empty' : String(value);
+
+      function addPrimitiveRow(list, key, value) {
+        const row = document.createElement('div');
+        row.className = 'row';
+        const term = document.createElement('dt');
+        const detail = document.createElement('dd');
+        term.textContent = prettyKey(key);
+        detail.textContent = valueText(value);
+        row.append(term, detail);
+        list.append(row);
+      }
+
+      function renderNested(value) {
+        const wrap = document.createElement('div');
+        wrap.className = 'nested';
+        if (Array.isArray(value)) {
+          if (!value.length) {
+            wrap.textContent = 'No entries';
+            return wrap;
+          }
+          value.forEach((item, index) => {
+            const block = document.createElement('div');
+            block.className = 'nested-item';
+            if (isPrimitive(item)) {
+              block.textContent = valueText(item);
+            } else {
+              block.append(renderDefinition(item));
+            }
+            block.setAttribute('aria-label', `Item ${index + 1}`);
+            wrap.append(block);
+          });
+          return wrap;
+        }
+        if (value && typeof value === 'object') return renderDefinition(value);
+        wrap.textContent = valueText(value);
+        return wrap;
+      }
+
+      function renderDefinition(record) {
+        const list = document.createElement('dl');
+        list.className = 'rows';
+        const entries = Object.entries(record || {}).filter(([key]) => !isHiddenKey(key));
+        if (!entries.length) {
+          addPrimitiveRow(list, 'Result', 'No details provided');
+          return list;
+        }
+        entries.forEach(([key, value]) => {
+          if (isPrimitive(value)) {
+            addPrimitiveRow(list, key, value);
+            return;
+          }
+          const row = document.createElement('div');
+          row.className = 'row';
+          const term = document.createElement('dt');
+          const detail = document.createElement('dd');
+          term.textContent = prettyKey(key);
+          detail.append(renderNested(value));
+          row.append(term, detail);
+          list.append(row);
+        });
+        return list;
+      }
+
+      function makeRecord(record, index, total, title = '') {
+        const article = document.createElement('article');
+        article.className = 'record';
+        const head = document.createElement('div');
+        head.className = 'record-head';
+        const heading = document.createElement('h2');
+        heading.textContent = title || `Record ${index + 1}`;
+        const count = document.createElement('span');
+        count.className = 'count';
+        count.textContent = `${index + 1}/${total}`;
+        head.append(heading, count);
+        article.append(head);
+        if (isPrimitive(record)) {
+          const list = document.createElement('dl');
+          list.className = 'rows';
+          addPrimitiveRow(list, 'Value', record);
+          article.append(list);
+        } else {
+          article.append(renderDefinition(record));
+        }
+        return article;
+      }
+
+      function findRecords(payload) {
+        if (Array.isArray(payload)) return payload;
+        if (!payload || typeof payload !== 'object') return [payload];
+        const keys = ['data', 'results', 'result', 'records', 'items'];
+        for (const key of keys) {
+          if (Array.isArray(payload[key])) return payload[key];
+        }
+        return null;
+      }
+
+      function renderPayload(payload) {
+        results.replaceChildren();
+        const records = findRecords(payload);
+        if (records && records.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'empty';
+          const title = document.createElement('strong');
+          const copy = document.createElement('p');
+          title.textContent = 'No records found.';
+          copy.textContent = 'No matching entries were returned for this number.';
+          empty.append(title, copy);
+          results.append(empty);
+          setStatus('Lookup complete', 'success');
+          return;
+        }
+        if (records) {
+          records.forEach((record, i) => results.append(makeRecord(record, i, records.length)));
+          setStatus(`${records.length} ${records.length === 1 ? 'record' : 'records'} found`, 'success');
+          return;
+        }
+        const visibleEntries = Object.entries(payload).filter(([key]) => !isHiddenKey(key));
+        if (!visibleEntries.length) {
+          results.append(makeRecord(payload, 0, 1, 'Response'));
+        } else {
+          const flat = Object.fromEntries(visibleEntries);
+          results.append(makeRecord(flat, 0, 1, 'Response'));
+        }
+        setStatus('Lookup complete', 'success');
+      }
+
+      let activeController;
+      form.addEventListener('submit', async event => {
+        event.preventDefault();
+        const digits = input.value.replace(/\D/g, '');
+        if (!/^\d{10}$/.test(digits)) {
+          results.replaceChildren();
+          input.setAttribute('aria-invalid', 'true');
+          setStatus('Enter exactly 10 digits.', 'error');
+          input.focus();
+          return;
+        }
+
+        activeController?.abort();
+        const controller = new AbortController();
+        activeController = controller;
+        const timeout = setTimeout(() => controller.abort(), 45000);
+        button.disabled = true;
+        button.textContent = 'Checking...';
+        results.replaceChildren();
+        setStatus('Searching...', 'loading');
+
+        try {
+          const response = await fetch(API + encodeURIComponent(`91${digits}`), {
+            method: 'GET',
+            headers: {Accept: 'application/json'},
+            signal: controller.signal
+          });
+          const raw = await response.text();
+          let payload;
+          try {
+            payload = raw ? JSON.parse(raw) : null;
+          } catch {
+            throw new Error('Lookup failed. Try again.');
+          }
+          if (!response.ok) {
+            throw new Error('Lookup failed. Try again.');
+          }
+          if (payload && typeof payload === 'object' && (payload.status === false || payload.success === false)) {
+            throw new Error('Lookup failed. Try again.');
+          }
+          renderPayload(payload);
+        } catch (error) {
+          results.replaceChildren();
+          const message = error.name === 'AbortError'
+            ? 'Lookup timed out. Try again.'
+            : 'Lookup failed. Check your connection and try again.';
+          setStatus(message, 'error');
+        } finally {
+          clearTimeout(timeout);
+          if (activeController === controller) {
+            button.disabled = false;
+            button.textContent = 'Check number';
+          }
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
